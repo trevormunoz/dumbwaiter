@@ -50,6 +50,9 @@ coverage.xml
 # Django stuff:
 *.log
 
+# IPython notebook stuff:
+.ipynb_checkpoints/
+
 # Sphinx documentation
 docs/_build/
 
