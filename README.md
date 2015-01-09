@@ -1,4 +1,5 @@
-### ETL Pipeline for NYPL Menus Data
+# Dumbwaiter
+#### An ETL pipeline for NYPL menus data
 
 Script for processing open data released by the 
 New York Public Library's 
