@@ -32,7 +32,7 @@
 # 
 # &nbsp;
 
-# In[1]:
+# In[ ]:
 
 import os
 import datetime
@@ -42,13 +42,13 @@ import tarfile
 
 # Set up logging …
 
-# In[2]:
+# In[ ]:
 
 import logging
 import logging.handlers
 
 
-# In[3]:
+# In[ ]:
 
 LOG_FILENAME = os.path.join(os.environ['MENUS_LOG_HOME'], 'nypl_menus_data_transform.log')
 
@@ -61,26 +61,32 @@ handler.setFormatter(formatter)
 pipeline_logger.addHandler(handler)
 
 
-# In[5]:
+# In[ ]:
+
+pipeline_logger.info('Menus ETL Pipeline: Starting run …')
+
+
+# In[ ]:
 
 srcfile = [x for x in os.listdir(os.environ['MENUS_SOURCE_DATA']) if os.path.splitext(x)[1] == '.tgz'][0]
 
 
-# In[6]:
+# In[ ]:
 
 tar = tarfile.open(os.path.join(os.environ['MENUS_SOURCE_DATA'], srcfile))
 
 
-# In[7]:
+# In[ ]:
 
+pipeline_logger.info('Extracting source files …')
 pipeline_logger.info('Listing contents of the tar package …')
 for tf in tar.getmembers():
     pipeline_logger.info('Name: {0} \t Last Modified: {1}'.format(tf.name, time.ctime(tf.mtime)))
 
 
-# In[8]:
+# In[ ]:
 
-pipeline_logger.info('Extracting files to data directory.')
+pipeline_logger.info('Untarring and unzipping …')
 tar.extractall(path=os.environ['MENUS_SOURCE_DATA'])
 
 for f in os.listdir(os.environ['MENUS_SOURCE_DATA']):
@@ -89,7 +95,7 @@ for f in os.listdir(os.environ['MENUS_SOURCE_DATA']):
             pipeline_logger.info('{0} … \u2713'.format(f))
 
 
-# In[9]:
+# In[ ]:
 
 tar.close()
 
@@ -98,7 +104,7 @@ tar.close()
 # 
 # &nbsp;
 
-# In[10]:
+# In[ ]:
 
 import re
 import json
@@ -106,67 +112,9 @@ import pytz
 import pandas as pd
 
 
-# In[11]:
+# #### Helper Functions
 
-pipeline_logger.info('Loading data into memory …')
-
-LATEST_DISH_DATA_DF = pd.DataFrame.from_csv(os.path.join(os.environ['MENUS_SOURCE_DATA'], 'Dish.csv'), 
-                                            index_col='id')
-LATEST_ITEM_DATA_DF = pd.DataFrame.from_csv(os.path.join(os.environ['MENUS_SOURCE_DATA'], 'MenuItem.csv'), 
-                                            index_col='dish_id')
-LATEST_PAGE_DATA_DF = pd.DataFrame.from_csv(os.path.join(os.environ['MENUS_SOURCE_DATA'], 'MenuPage.csv'), 
-                                            index_col='id')
-LATEST_MENU_DATA_DF = pd.DataFrame.from_csv(os.path.join(os.environ['MENUS_SOURCE_DATA'], 'Menu.csv'),
-                                             index_col='id')
-
-pipeline_logger.info('Data loaded')
-
-
-# ##### Dish.csv
-# 
-
-# In[12]:
-
-NULL_APPEARANCES = LATEST_DISH_DATA_DF[LATEST_DISH_DATA_DF.times_appeared == 0]
-
-
-# In[13]:
-
-pipeline_logger.info('Data set contains {0} dishes that appear 0 times …'.format(
-    len(NULL_APPEARANCES))
-)
-
-
-# In[14]:
-
-NON_NULL_DISH_DATA_DF = LATEST_DISH_DATA_DF[LATEST_DISH_DATA_DF.times_appeared != 0]
-
-
-# In[15]:
-
-discarded_columns = [n for n in NON_NULL_DISH_DATA_DF.columns if n not in 
-                     ['name', 'menus_appeared', 'times_appeared']]
-
-
-# In[16]:
-
-pipeline_logger.info('Discarding columns from Dish.csv …')
-for discard in discarded_columns:
-    pipeline_logger.info('{0} … removed'.format(discard))
-
-
-# In[17]:
-
-TRIMMED_DISH_DATA_DF = NON_NULL_DISH_DATA_DF[['name', 'menus_appeared', 'times_appeared']]
-
-
-# In[18]:
-
-pipeline_logger.info('Dish.csv contains {0} potentially-unique dish names before any normalization'.
-                     format(TRIMMED_DISH_DATA_DF.name.nunique()))
-
-
-# In[19]:
+# In[ ]:
 
 def normalize_names(obj):
     '''
@@ -183,20 +131,7 @@ def normalize_names(obj):
     return result
 
 
-# In[20]:
-
-TRIMMED_DISH_DATA_DF['normalized_name'] = TRIMMED_DISH_DATA_DF.name.map(normalize_names)
-
-
-# In[21]:
-
-pipeline_logger.info(
-    'Dish.csv contains {0} potentially-unique dish names after normalizing whitespace and punctuation'
-    .format(TRIMMED_DISH_DATA_DF.normalized_name.nunique())
-)
-
-
-# In[22]:
+# In[ ]:
 
 def fingerprint(obj):
     """
@@ -213,31 +148,11 @@ def fingerprint(obj):
     return fingerprint
 
 
-# In[23]:
-
-TRIMMED_DISH_DATA_DF['fingerprint'] = TRIMMED_DISH_DATA_DF.normalized_name.map(fingerprint)
-
-
-# In[24]:
-
-pipeline_logger.info(
-    'Dish.csv contains {0} unique fingerprint values'
-    .format(TRIMMED_DISH_DATA_DF.fingerprint.nunique())
-)
-
-
-# In[25]:
-
-#TRIMMED_DISH_DATA_DF.head()
-
-
-# ##### MenuItem.csv
-# 
-
-# In[26]:
+# In[ ]:
 
 # TOFIX: This code is very slow
 utc = pytz.utc
+
 def reformat_dates(obj):
     naive_date_in = datetime.datetime.strptime(obj, '%Y-%m-%d %H:%M:%S %Z')
     date_in = naive_date_in.replace(tzinfo=utc)
@@ -245,234 +160,178 @@ def reformat_dates(obj):
     return date_out
 
 
-# In[27]:
-
-pipeline_logger.info('Reformatting item dates …')
-LATEST_ITEM_DATA_DF['item_created_at'] = LATEST_ITEM_DATA_DF.created_at.map(reformat_dates)
-LATEST_ITEM_DATA_DF['item_updated_at'] = LATEST_ITEM_DATA_DF.updated_at.map(reformat_dates)
-pipeline_logger.info('Date reformatting complete …')
-
-
-# In[28]:
-
-discarded_columns2 = [n for n in LATEST_ITEM_DATA_DF.columns if n not in 
-                      ['id', 'menu_page_id', 'xpos', 'ypos', 'item_created_at', 'item_updated_at']]
-
-
-# In[29]:
-
-pipeline_logger.info('Discarding columns from MenuItem.csv …')
-for discard2 in discarded_columns2:
-    pipeline_logger.info('{0} … removed'.format(discard2))
-
-
-# In[30]:
-
-TRIMMED_ITEM_DATA_DF = LATEST_ITEM_DATA_DF[['id', 'menu_page_id', 'xpos', 'ypos',
-                                           'item_created_at', 'item_updated_at']]
-
-
-# In[31]:
-
-#TRIMMED_ITEM_DATA_DF.head()
-
-
-# ##### MenuPage.csv
-
-# In[32]:
-
-#LATEST_PAGE_DATA_DF.head()
-
-
-# In[33]:
-
-LATEST_PAGE_DATA_DF[['full_height', 'full_width']].astype(int, raise_on_error=False)
-
-
-# ##### Menu.csv
-
-# In[34]:
-
-LATEST_MENU_DATA_DF.columns
-
-
-# In[35]:
-
-discarded_columns3 = [n for n in LATEST_MENU_DATA_DF.columns if n not in 
-                      ['sponsor', 'location', 'date', 'page_count', 'dish_count']]
-
-
-# In[36]:
-
-pipeline_logger.info('Discarding columns from Menu.csv …')
-for discard3 in discarded_columns3:
-    pipeline_logger.info('{0} … removed'.format(discard3))
-
-
-# In[37]:
-
-TRIMMED_MENU_DATA_DF = LATEST_MENU_DATA_DF[['sponsor', 'location', 'date',
-                                            'page_count', 'dish_count']]
-
-
-# In[38]:
-
-#TRIMMED_MENU_DATA_DF.head()
-
-
-# ##### Merging DataFrames
-
-# In[39]:
-
-MERGED_ITEM_PAGES_DF = pd.merge(TRIMMED_ITEM_DATA_DF, LATEST_PAGE_DATA_DF, 
-                                left_on='menu_page_id', right_index=True, )
-
-
-# In[40]:
-
-MERGED_ITEM_PAGES_DF.columns = ['item_id', 'menu_page_id', 'xpos', 'ypos', 
-                                'item_created_at', 'item_updated_at', 'menu_id', 'page_number', 
-                                'image_id', 'full_height', 'full_width', 'uuid']
-
-
-# In[41]:
-
-#MERGED_ITEM_PAGES_DF.head()
-
-
-# In[42]:
-
-MERGED_ITEM_PAGES_MENUS_DF = pd.merge(TRIMMED_MENU_DATA_DF, MERGED_ITEM_PAGES_DF, 
-                                      left_index=True, right_on='menu_id')
-
-
-# In[43]:
-
-FULL_MERGE = pd.merge(MERGED_ITEM_PAGES_MENUS_DF, TRIMMED_DISH_DATA_DF, 
-                      left_index=True, right_index=True)
-
-
-# In[44]:
-
-FULL_MERGE.head()
-
-
-# In[45]:
-
-FOR_JSON_OUTPUT = FULL_MERGE.reset_index()
-
-
-# In[46]:
-
-FOR_JSON_OUTPUT.columns
-
-
-# In[47]:
-
-renamed_columns = ['dish_id', 'menu_sponsor', 'menu_location', 'menu_date', 'menu_page_count', 
-                   'menu_dish_count', 'item_id', 'menu_page_id', 'item_xpos', 'item_ypos', 
-                   'item_created_at', 'item_updated_at', 'menu_id', 'menu_page_number', 'image_id', 
-                   'page_image_full_height', 'page_image_full_width', 'page_image_uuid', 'dish_name', 
-                   'dish_menus_appeared', 'dish_times_appeared', 'dish_normalized_name', 'dish_name_fingerprint']
-
-
-# In[48]:
-
-FOR_JSON_OUTPUT.columns = renamed_columns
-
-
-# In[49]:
-
-FOR_JSON_OUTPUT[['menu_page_number', 'dish_id', 'item_id', 'menu_page_id', 'menu_id']].astype(int, raise_on_error=False)
-
-
-# In[50]:
-
-FOR_JSON_OUTPUT['dish_uri']= FOR_JSON_OUTPUT.dish_id.map(lambda x: 'http://menus.nypl.org/dishes/{0}'.format(int(x)))
-
-
-# In[51]:
-
-FOR_JSON_OUTPUT['item_uri']= FOR_JSON_OUTPUT.item_id.map(lambda x: 'http://menus.nypl.org/menu_items/{0}/edit'
-                                               .format(int(x)))
-
-
-# In[52]:
-
-FOR_JSON_OUTPUT['menu_page_uri'] = FOR_JSON_OUTPUT.menu_page_id.map(lambda x: 'http://menus.nypl.org/menu_pages/{0}'
-                                                          .format(int(x)))
-
-
-# In[53]:
-
-FOR_JSON_OUTPUT['menu_uri'] = FOR_JSON_OUTPUT.menu_id.map(lambda x:'http://menus.nypl.org/menus/{0}'
-                                                .format(int(x)))
-
-
-# In[54]:
-
-#FOR_JSON_OUTPUT.head()
-
-
-# In[55]:
-
-#FINAL_JSON_FP = os.path.join(os.environ['OUTPUTS_DIR'], 'transformed-menus-data-{0}.json'
-#                             .format(datetime.date.today()))
-
-
-# In[56]:
-
-from io import StringIO
-buf = StringIO()
-
-
-# In[57]:
-
-pipeline_logger.info('Generating JSON …')
-FOR_JSON_OUTPUT.to_json(path_or_buf=buf, orient='index', force_ascii=False)
-#pipeline_logger.info('JSON saved to {0}'.format(FINAL_JSON_FP))
-pipeline_logger.info('JSON ready')
-
-
-# This JSON needs to be reshaped …
-
-# In[58]:
-
-pipeline_logger.info('Loading JSON …')
-ALL_JSON_DATA = json.loads(buf.getvalue())
-pipeline_logger.info('JSON Loaded …')
-
-
 # In[ ]:
 
-def reshape_json(obj):
+def reshape_data(obj):
     '''
-    Takes a dictionary, spits out a dictionary of slightly different shape
-    needed for bulk import by Elasticsearch
+    Takes JSON, loads it, and spits out a dictionary of slightly different shape
+    needed for bulk import by Elasticsearch.
+    
+    Input is JSON rather than simply another dictionary so I can punt on properly
+    serializing things like 'NaN' by leaving that to pandas own to_json() function.
     '''
+    data = json.loads(obj)
     action = {
               "_index": "menus",
               "_type": "item",
-              "_id": int(obj['item_id']),
-              "_source": obj
+              "_id": int(data['item_id']),
+              "_source": data
               }
     return action
 
 
-# In[ ]:
-
-#Why is this operation taking so long???
-
-pipeline_logger.info('Preparing data to load into Elasticsearch …')
-
-actions = [reshape_json(d) for d in ALL_JSON_DATA.values()]
-
-pipeline_logger.info('{0} actions ready for loading …'.format(len(actions)))
-
+# #### DataFrame Loading
 
 # In[ ]:
 
-#actions[0]
+from collections import OrderedDict
+
+def load_dataframes(path):
+    """
+    Takes a file path where CSV files to be processed are located
+    and returns a single merged pandas DataFrame with the relevant
+    data
+    """
+    
+    pipeline_logger.info('Loading data from source files into memory …')
+
+    LATEST_DISH_DATA_DF = pd.DataFrame.from_csv(os.path.join(path, 'Dish.csv'), index_col='id')
+    LATEST_ITEM_DATA_DF = pd.DataFrame.from_csv(os.path.join(path, 'MenuItem.csv'), index_col='dish_id')
+    LATEST_PAGE_DATA_DF = pd.DataFrame.from_csv(os.path.join(path, 'MenuPage.csv'), index_col='id')
+    LATEST_MENU_DATA_DF = pd.DataFrame.from_csv(os.path.join(path, 'Menu.csv'), index_col='id')
+
+    pipeline_logger.info('Data loaded. Starting transformations …')
+    
+    # =================================
+    # 
+    #  Dish.csv
+    #
+    # =================================
+    
+    NULL_APPEARANCES = LATEST_DISH_DATA_DF[LATEST_DISH_DATA_DF.times_appeared == 0]
+    pipeline_logger.info('Data set contains {0} dishes that appear 0 times …'.format(len(NULL_APPEARANCES)))
+    
+    NON_NULL_DISH_DATA_DF = LATEST_DISH_DATA_DF[LATEST_DISH_DATA_DF.times_appeared != 0]
+    discarded_columns = [n for n in NON_NULL_DISH_DATA_DF.columns if n not in ['name', 'menus_appeared', 'times_appeared']]
+    pipeline_logger.info('Discarding columns from Dish.csv …')
+    for discard in discarded_columns:
+        pipeline_logger.info('{0} … removed'.format(discard))
+        
+    TRIMMED_DISH_DATA_DF = NON_NULL_DISH_DATA_DF[['name', 'menus_appeared', 'times_appeared']]
+    pipeline_logger.info('Dish.csv contains {0} potentially-unique dish names before any normalization'.
+                     format(TRIMMED_DISH_DATA_DF.name.nunique()))
+    
+    TRIMMED_DISH_DATA_DF['normalized_name'] = TRIMMED_DISH_DATA_DF.name.map(normalize_names)
+    pipeline_logger.info(
+    'Dish.csv contains {0} potentially-unique dish names after normalizing whitespace and punctuation'
+    .format(TRIMMED_DISH_DATA_DF.normalized_name.nunique())
+    )
+    
+    TRIMMED_DISH_DATA_DF['fingerprint'] = TRIMMED_DISH_DATA_DF.normalized_name.map(fingerprint)
+    pipeline_logger.info(
+    'Dish.csv contains {0} unique fingerprint values'
+    .format(TRIMMED_DISH_DATA_DF.fingerprint.nunique())
+    )
+    #TRIMMED_DISH_DATA_DF.head()
+    
+    # =================================
+    # 
+    # MenuItem.csv
+    #
+    # =================================
+    
+    pipeline_logger.info('Reformatting item dates …')
+    LATEST_ITEM_DATA_DF['item_created_at'] = LATEST_ITEM_DATA_DF.created_at.map(reformat_dates)
+    LATEST_ITEM_DATA_DF['item_updated_at'] = LATEST_ITEM_DATA_DF.updated_at.map(reformat_dates)
+    pipeline_logger.info('Date reformatting complete …')
+    
+    discarded_columns2 = [n for n in LATEST_ITEM_DATA_DF.columns if n not in 
+                      ['id', 'menu_page_id', 'xpos', 'ypos', 'item_created_at', 'item_updated_at']]
+    pipeline_logger.info('Discarding columns from MenuItem.csv …')
+    for discard2 in discarded_columns2:
+        pipeline_logger.info('{0} … removed'.format(discard2))
+        
+    TRIMMED_ITEM_DATA_DF = LATEST_ITEM_DATA_DF[['id', 'menu_page_id', 'xpos', 'ypos',
+                                           'item_created_at', 'item_updated_at']]
+    #TRIMMED_ITEM_DATA_DF.head()
+    
+    # =================================
+    # 
+    # MenuPage.csv
+    #
+    # =================================
+    
+    #LATEST_PAGE_DATA_DF.head()
+    LATEST_PAGE_DATA_DF[['full_height', 'full_width']].astype(int, raise_on_error=False)
+    
+    # =================================
+    # 
+    # Menu.csv
+    #
+    # =================================
+    
+    LATEST_MENU_DATA_DF.columns
+    
+    discarded_columns3 = [n for n in LATEST_MENU_DATA_DF.columns if n not in 
+                      ['sponsor', 'location', 'date', 'page_count', 'dish_count']]
+    pipeline_logger.info('Discarding columns from Menu.csv …')
+    for discard3 in discarded_columns3:
+        pipeline_logger.info('{0} … removed'.format(discard3))
+    
+    TRIMMED_MENU_DATA_DF = LATEST_MENU_DATA_DF[['sponsor', 'location', 'date',
+                                            'page_count', 'dish_count']]
+    #TRIMMED_MENU_DATA_DF.head()
+    
+    # =================================
+    # 
+    # Merged DataFrames
+    #
+    # =================================
+    
+    pipeline_logger.info('Merging dataframes …')
+    MERGED_ITEM_PAGES_DF = pd.merge(TRIMMED_ITEM_DATA_DF, LATEST_PAGE_DATA_DF, 
+                                left_on='menu_page_id', right_index=True, )
+    
+    MERGED_ITEM_PAGES_DF.columns = ['item_id', 'menu_page_id', 'xpos', 'ypos', 
+                                'item_created_at', 'item_updated_at', 'menu_id', 'page_number', 
+                                'image_id', 'full_height', 'full_width', 'uuid']
+    #MERGED_ITEM_PAGES_DF.head()
+    
+    MERGED_ITEM_PAGES_MENUS_DF = pd.merge(TRIMMED_MENU_DATA_DF, MERGED_ITEM_PAGES_DF, 
+                                      left_index=True, right_on='menu_id')
+    
+    FULL_MERGE = pd.merge(MERGED_ITEM_PAGES_MENUS_DF, TRIMMED_DISH_DATA_DF, 
+                      left_index=True, right_index=True)
+    #FULL_MERGE.head()
+    
+    FOR_JSON_OUTPUT = FULL_MERGE.reset_index()
+    
+    FOR_JSON_OUTPUT.columns
+    renamed_columns = ['dish_id', 'menu_sponsor', 'menu_location', 'menu_date', 'menu_page_count', 
+                   'menu_dish_count', 'item_id', 'menu_page_id', 'item_xpos', 'item_ypos', 
+                   'item_created_at', 'item_updated_at', 'menu_id', 'menu_page_number', 'image_id', 
+                   'page_image_full_height', 'page_image_full_width', 'page_image_uuid', 'dish_name', 
+                   'dish_menus_appeared', 'dish_times_appeared', 'dish_normalized_name', 'dish_name_fingerprint']
+    FOR_JSON_OUTPUT.columns = renamed_columns
+    
+    FOR_JSON_OUTPUT[['menu_page_number', 'dish_id', 'item_id', 'menu_page_id', 'menu_id']].astype(int, raise_on_error=False)
+    
+    FOR_JSON_OUTPUT['dish_uri']= FOR_JSON_OUTPUT.dish_id.map(lambda x: 'http://menus.nypl.org/dishes/{0}'.format(int(x)))
+    FOR_JSON_OUTPUT['item_uri']= FOR_JSON_OUTPUT.item_id.map(lambda x: 'http://menus.nypl.org/menu_items/{0}/edit'
+                                               .format(int(x)))
+    FOR_JSON_OUTPUT['menu_page_uri'] = FOR_JSON_OUTPUT.menu_page_id.map(lambda x: 'http://menus.nypl.org/menu_pages/{0}'
+                                                          .format(int(x)))
+    FOR_JSON_OUTPUT['menu_uri'] = FOR_JSON_OUTPUT.menu_id.map(lambda x:'http://menus.nypl.org/menus/{0}'
+                                                .format(int(x)))
+    
+    FOR_JSON_OUTPUT.fillna('null')
+    
+    pipeline_logger.info('Merged dataframe ready')
+    #FOR_JSON_OUTPUT.head()
+    
+    # df.iterrows is a generator that yields a positional index and a Series,
+    # call the to_json method on the series
+    return (reshape_data(row.to_json()) for i, row in FOR_JSON_OUTPUT.iterrows())
 
 
 # ### Load (to Elasticsearch)
@@ -490,6 +349,7 @@ os.environ['MENUS_ES_HOST_PORT'] = '5000'
 
 # In[ ]:
 
+pipeline_logger.info('Verifying Elasticsearch server is ready to receive data …')
 es = elasticsearch.Elasticsearch([{'host': os.environ['MENUS_ES_HOSTNAME'], 'port': os.environ['MENUS_ES_HOST_PORT']}])
 
 
@@ -497,11 +357,6 @@ es = elasticsearch.Elasticsearch([{'host': os.environ['MENUS_ES_HOSTNAME'], 'por
 
 INDEX_NAME = 'menus'
 TYPE_NAME = 'item'
-
-
-# In[ ]:
-
-#es.info()
 
 
 # Check if the index already exists and, if so, delete it to keep things idempotent
@@ -616,22 +471,73 @@ pipeline_logger.info(" response: '{0}'".format(res))
 
 # In[ ]:
 
-def chunk_actions(l, size):
-    for i in range(0, len(l), size):
-        yield l[i:i+size]
+# def chunk_actions(l, size):
+#     for i in range(0, len(l), size):
+#         yield l[i:i+size]
+
+
+# In[ ]:
+
+# from elasticsearch import helpers
+
+# pipeline_logger.info('Loading data into Elasticsearch …')
+
+# for batch in chunk_actions(DOCS_TO_INDEX, 100000):
+#     pipeline_logger.info(es.indices.stats(INDEX_NAME))
+#     helpers.bulk(es, batch)
+
+# pipeline_logger.info('Elasticsearch index ready!')
+
+
+# #### Reshaping DataFrame JSON to ES bulk upload JSON
+
+# In[ ]:
+
+# # From this SO answer: http://stackoverflow.com/questions/24527006/split-a-generator-into-chunks-without-pre-walking-it
+# from itertools import chain, islice
+
+# def chunks(iterable, size=10):
+#     iterator = iter(iterable)
+#     for first in iterator:
+#         yield chain([first], islice(iterator, size - 1))
 
 
 # In[ ]:
 
 from elasticsearch import helpers
 
-pipeline_logger.info('Loading data into Elasticsearch …')
+es_action_gen = load_dataframes(os.environ['MENUS_SOURCE_DATA'])
 
-for batch in chunk_actions(actions, 50000):
-    pipeline_logger.info(es.indices.stats(INDEX_NAME))
-    helpers.bulk(es, batch)
+pipeline_logger.info('Preparing data to load into Elasticsearch …')
+try:
+    for ok, result in helpers.streaming_bulk(es, es_action_gen, chunk_size=1000):
+        action, result = result.popitem()
+        doc_id = '/menus/item/{0}'.format(result['_id'])
+        if not ok:
+            pipeline_logger.error('Failed to {0} document {1}: {2}'.format(action, doc_id, result['error']))
+        else:
+            pipeline_logger.info(doc_id + 'succeeded')
+except BaseException as e:
+    pipeline_logger.error('Something went wrong: {0}'.format(str(e)))
 
-pipeline_logger.info('Elasticsearch index ready!')
+
+# In[ ]:
+
+# from elasticsearch import helpers
+
+# ROWGEN = load_dataframes(os.environ['MENUS_SOURCE_DATA'])
+
+# pipeline_logger.info('Preparing data to load into Elasticsearch …')
+# for batch in chunks(ROWGEN, size=100000):
+#     actions = [reshape_json(doc) for doc in batch]
+#     pipeline_logger.info('{0} actions ready for loading …'.format(len(actions)))
+#     #pipeline_logger.info(actions[0])
+#     res = helpers.bulk(es, actions)
+#     pipeline_logger.info(res)
+#     #pipeline_logger.info(es.indices.stats(INDEX_NAME))
+    
+# #pipeline_logger.info('Generator exhausted')
+# pipeline_logger.info('Elasticsearch index ready!')
 
 
 # In[ ]:
