@@ -22,12 +22,13 @@ import re
 import tarfile
 import time
 
-# Set up logging
+
+#TODO: Give option to set up or turn off at cmd line
 LOG_FILENAME = os.path.join(os.environ['MENUS_LOG_HOME'],
                             'nypl_menus_data_transform.log')
 
-pipeline_logger = logging.getLogger('MenusDataTransformLogger')
-pipeline_logger.setLevel(logging.INFO)
+PIPELINE_LOGGER = logging.getLogger('MenusDataTransformLogger')
+PIPELINE_LOGGER.setLevel(logging.INFO)
 formatter = logging.Formatter(
     '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
@@ -36,11 +37,8 @@ handler = logging.handlers.RotatingFileHandler(
     maxBytes=500000,
     backupCount=10)
 handler.setFormatter(formatter)
-pipeline_logger.addHandler(handler)
-
+PIPELINE_LOGGER.addHandler(handler)
 UTC = pytz.utc
-os.environ['MENUS_ES_HOSTNAME'] = 'localhost'
-os.environ['MENUS_ES_HOST_PORT'] = '5000'
 
 
 def normalize_names(obj):
@@ -101,13 +99,13 @@ def reshape_data(obj):
     return action
 
 
-def server(hostname=os.environ['MENUS_ES_HOSTNAME'], host_port=os.environ['MENUS_ES_HOST_PORT']):
+def server(hostname, host_port):
     """
     Makes sure that an elasticsearch server is running.
     Sets up the appropriate index and mapping.
     """
     
-    pipeline_logger.info('Verifying Elasticsearch server is ready to receive data …')
+    PIPELINE_LOGGER.info('Verifying Elasticsearch server is ready to receive data …')
     es = elasticsearch.Elasticsearch([{'host': hostname, 'port': host_port}])
 
     index_name = 'menus'
@@ -115,13 +113,13 @@ def server(hostname=os.environ['MENUS_ES_HOSTNAME'], host_port=os.environ['MENUS
 
     # Check if the index already exists and, if so, delete it to keep things idempotent
     if es.indices.exists(index_name):
-        pipeline_logger.info("deleting '{0}' index...".format(index_name))
+        PIPELINE_LOGGER.info("deleting '{0}' index...".format(index_name))
         res = es.indices.delete(index = index_name)
-        pipeline_logger.info(" response: '{0}'".format(res))
+        PIPELINE_LOGGER.info(" response: '{0}'".format(res))
 
-    pipeline_logger.info("creating '{0}' index...".format(index_name))
+    PIPELINE_LOGGER.info("creating '{0}' index...".format(index_name))
     res = es.indices.create(index = index_name)
-    pipeline_logger.info(" response: '{0}'".format(res))
+    PIPELINE_LOGGER.info(" response: '{0}'".format(res))
 
     item_mapping = {"properties": {
         'item_updated_at': {
@@ -206,9 +204,9 @@ def server(hostname=os.environ['MENUS_ES_HOSTNAME'], host_port=os.environ['MENUS
     }
     }
 
-    pipeline_logger.info("Creating mapping for '{0}' index...".format(index_name))
+    PIPELINE_LOGGER.info("Creating mapping for '{0}' index...".format(index_name))
     res = es.indices.put_mapping(index='menus', doc_type='item', body=item_mapping)
-    pipeline_logger.info(" response: '{0}'".format(res))
+    PIPELINE_LOGGER.info(" response: '{0}'".format(res))
 
     return es
 
@@ -223,29 +221,29 @@ def load_and_tranform(fpath):
     srcfile = [x for x in os.listdir(fpath) if os.path.splitext(x)[1] == '.tgz'][0]
     tar = tarfile.open(os.path.join(fpath, srcfile))
 
-    pipeline_logger.info('Extracting source files …')
-    pipeline_logger.info('Listing contents of the tar package …')
+    PIPELINE_LOGGER.info('Extracting source files …')
+    PIPELINE_LOGGER.info('Listing contents of the tar package …')
     for tf in tar.getmembers():
-        pipeline_logger.info('Name: {0} \t Last Modified: {1}'.format(tf.name, time.ctime(tf.mtime)))
+        PIPELINE_LOGGER.info('Name: {0} \t Last Modified: {1}'.format(tf.name, time.ctime(tf.mtime)))
 
-    pipeline_logger.info('Untarring and unzipping …')
+    PIPELINE_LOGGER.info('Untarring and unzipping …')
     tar.extractall(path=fpath)
 
     for f in os.listdir(fpath):
         if f.endswith('csv'):
             if os.path.isfile(os.path.join(fpath, f)) == True:
-                pipeline_logger.info('{0} … \u2713'.format(f))
+                PIPELINE_LOGGER.info('{0} … \u2713'.format(f))
 
     tar.close()
     
-    pipeline_logger.info('Loading data from source files into memory …')
+    PIPELINE_LOGGER.info('Loading data from source files into memory …')
 
-    LATEST_DISH_DATA_DF = pd.DataFrame.from_csv(os.path.join(fpath, 'Dish.csv'), index_col='id')
-    LATEST_ITEM_DATA_DF = pd.DataFrame.from_csv(os.path.join(fpath, 'MenuItem.csv'), index_col='dish_id')
-    LATEST_PAGE_DATA_DF = pd.DataFrame.from_csv(os.path.join(fpath, 'MenuPage.csv'), index_col='id')
-    LATEST_MENU_DATA_DF = pd.DataFrame.from_csv(os.path.join(fpath, 'Menu.csv'), index_col='id')
+    latest_dish_data_df = pd.DataFrame.from_csv(os.path.join(fpath, 'Dish.csv'), index_col='id')
+    latest_item_data_df = pd.DataFrame.from_csv(os.path.join(fpath, 'MenuItem.csv'), index_col='dish_id')
+    latest_page_data_df = pd.DataFrame.from_csv(os.path.join(fpath, 'MenuPage.csv'), index_col='id')
+    latest_menu_data_df = pd.DataFrame.from_csv(os.path.join(fpath, 'Menu.csv'), index_col='id')
 
-    pipeline_logger.info('Data loaded. Starting transformations …')
+    PIPELINE_LOGGER.info('Data loaded. Starting transformations …')
     
     # =================================
     # 
@@ -253,32 +251,32 @@ def load_and_tranform(fpath):
     #
     # =================================
 
-    pipeline_logger.info('Working on Dish.csv …')
-    NULL_APPEARANCES = LATEST_DISH_DATA_DF[LATEST_DISH_DATA_DF.times_appeared == 0]
-    pipeline_logger.info('Data set contains {0} dishes that appear 0 times …'.format(len(NULL_APPEARANCES)))
+    PIPELINE_LOGGER.info('Working on Dish.csv …')
+    null_appearances = latest_dish_data_df[latest_dish_data_df.times_appeared == 0]
+    PIPELINE_LOGGER.info('Data set contains {0} dishes that appear 0 times …'.format(len(null_appearances)))
     
-    NON_NULL_DISH_DATA_DF = LATEST_DISH_DATA_DF[LATEST_DISH_DATA_DF.times_appeared != 0]
-    discarded_columns = [n for n in NON_NULL_DISH_DATA_DF.columns if n not in ['name', 'menus_appeared', 'times_appeared']]
-    pipeline_logger.info('Discarding columns from Dish.csv …')
+    non_null_dish_data_df = latest_dish_data_df[latest_dish_data_df.times_appeared != 0]
+    discarded_columns = [n for n in non_null_dish_data_df.columns if n not in ['name', 'menus_appeared', 'times_appeared']]
+    PIPELINE_LOGGER.info('Discarding columns from Dish.csv …')
     for discard in discarded_columns:
-        pipeline_logger.info('{0} … removed'.format(discard))
+        PIPELINE_LOGGER.info('{0} … removed'.format(discard))
         
-    TRIMMED_DISH_DATA_DF = NON_NULL_DISH_DATA_DF[['name', 'menus_appeared', 'times_appeared']]
-    pipeline_logger.info('Dish.csv contains {0} potentially-unique dish names before any normalization'.
-                     format(TRIMMED_DISH_DATA_DF.name.nunique()))
+    trimmed_dish_data_df = non_null_dish_data_df[['name', 'menus_appeared', 'times_appeared']]
+    PIPELINE_LOGGER.info('Dish.csv contains {0} potentially-unique dish names before any normalization'.
+                     format(trimmed_dish_data_df.name.nunique()))
     
-    TRIMMED_DISH_DATA_DF['normalized_name'] = TRIMMED_DISH_DATA_DF.name.map(normalize_names)
-    pipeline_logger.info(
+    trimmed_dish_data_df['normalized_name'] = trimmed_dish_data_df.name.map(normalize_names)
+    PIPELINE_LOGGER.info(
     'Dish.csv contains {0} potentially-unique dish names after normalizing whitespace and punctuation'
-    .format(TRIMMED_DISH_DATA_DF.normalized_name.nunique())
+    .format(trimmed_dish_data_df.normalized_name.nunique())
     )
     
-    TRIMMED_DISH_DATA_DF['fingerprint'] = TRIMMED_DISH_DATA_DF.normalized_name.map(fingerprint)
-    pipeline_logger.info(
+    trimmed_dish_data_df['fingerprint'] = trimmed_dish_data_df.normalized_name.map(fingerprint)
+    PIPELINE_LOGGER.info(
     'Dish.csv contains {0} unique fingerprint values'
-    .format(TRIMMED_DISH_DATA_DF.fingerprint.nunique())
+    .format(trimmed_dish_data_df.fingerprint.nunique())
     )
-    #TRIMMED_DISH_DATA_DF.head()
+    #trimmed_dish_data_df.head()
     
     # =================================
     # 
@@ -286,21 +284,22 @@ def load_and_tranform(fpath):
     #
     # =================================
     
-    pipeline_logger.info('Working on MenuItem.csv …')
-    pipeline_logger.info('Reformatting item dates …')
-    LATEST_ITEM_DATA_DF['item_created_at'] = LATEST_ITEM_DATA_DF.created_at.map(reformat_dates)
-    LATEST_ITEM_DATA_DF['item_updated_at'] = LATEST_ITEM_DATA_DF.updated_at.map(reformat_dates)
-    pipeline_logger.info('Date reformatting complete …')
+    PIPELINE_LOGGER.info('Working on MenuItem.csv …')
+    PIPELINE_LOGGER.info("Reformatting item dates …\
+                        This may take a few minutes …")
+    latest_item_data_df['item_created_at'] = latest_item_data_df.created_at.map(reformat_dates)
+    latest_item_data_df['item_updated_at'] = latest_item_data_df.updated_at.map(reformat_dates)
+    PIPELINE_LOGGER.info('Date reformatting complete …')
     
-    discarded_columns2 = [n for n in LATEST_ITEM_DATA_DF.columns if n not in 
+    discarded_columns2 = [n for n in latest_item_data_df.columns if n not in 
                       ['id', 'menu_page_id', 'xpos', 'ypos', 'item_created_at', 'item_updated_at']]
-    pipeline_logger.info('Discarding columns from MenuItem.csv …')
+    PIPELINE_LOGGER.info('Discarding columns from MenuItem.csv …')
     for discard2 in discarded_columns2:
-        pipeline_logger.info('{0} … removed'.format(discard2))
+        PIPELINE_LOGGER.info('{0} … removed'.format(discard2))
         
-    TRIMMED_ITEM_DATA_DF = LATEST_ITEM_DATA_DF[['id', 'menu_page_id', 'xpos', 'ypos',
+    trimmed_item_data_df = latest_item_data_df[['id', 'menu_page_id', 'xpos', 'ypos',
                                            'item_created_at', 'item_updated_at']]
-    #TRIMMED_ITEM_DATA_DF.head()
+    #trimmed_item_data_df.head()
     
     # =================================
     # 
@@ -308,8 +307,8 @@ def load_and_tranform(fpath):
     #
     # =================================
     
-    pipeline_logger.info('Working on MenuPage.csv …')
-    LATEST_PAGE_DATA_DF[['full_height', 'full_width']].astype(int, raise_on_error=False)
+    PIPELINE_LOGGER.info('Working on MenuPage.csv …')
+    latest_page_data_df[['full_height', 'full_width']].astype(int, raise_on_error=False)
     
     # =================================
     # 
@@ -317,16 +316,16 @@ def load_and_tranform(fpath):
     #
     # =================================
     
-    pipeline_logger.info('Working on Menu.csv …')
-    discarded_columns3 = [n for n in LATEST_MENU_DATA_DF.columns if n not in 
+    PIPELINE_LOGGER.info('Working on Menu.csv …')
+    discarded_columns3 = [n for n in latest_menu_data_df.columns if n not in 
                       ['sponsor', 'location', 'date', 'page_count', 'dish_count']]
-    pipeline_logger.info('Discarding columns from Menu.csv …')
+    PIPELINE_LOGGER.info('Discarding columns from Menu.csv …')
     for discard3 in discarded_columns3:
-        pipeline_logger.info('{0} … removed'.format(discard3))
+        PIPELINE_LOGGER.info('{0} … removed'.format(discard3))
     
-    TRIMMED_MENU_DATA_DF = LATEST_MENU_DATA_DF[['sponsor', 'location', 'date',
+    trimmed_menu_data_df = latest_menu_data_df[['sponsor', 'location', 'date',
                                             'page_count', 'dish_count']]
-    #TRIMMED_MENU_DATA_DF.head()
+    #trimmed_menu_data_df.head()
     
     # =================================
     # 
@@ -334,71 +333,81 @@ def load_and_tranform(fpath):
     #
     # =================================
     
-    pipeline_logger.info('Merging dataframes …')
-    MERGED_ITEM_PAGES_DF = pd.merge(TRIMMED_ITEM_DATA_DF, LATEST_PAGE_DATA_DF, 
+    PIPELINE_LOGGER.info('Merging dataframes …')
+    merged_item_pages_df = pd.merge(trimmed_item_data_df, latest_page_data_df, 
                                 left_on='menu_page_id', right_index=True, )
     
-    MERGED_ITEM_PAGES_DF.columns = ['item_id', 'menu_page_id', 'xpos', 'ypos', 
+    merged_item_pages_df.columns = ['item_id', 'menu_page_id', 'xpos', 'ypos', 
                                 'item_created_at', 'item_updated_at', 'menu_id', 'page_number', 
                                 'image_id', 'full_height', 'full_width', 'uuid']
-    #MERGED_ITEM_PAGES_DF.head()
+    #merged_item_pages_df.head()
     
-    MERGED_ITEM_PAGES_MENUS_DF = pd.merge(TRIMMED_MENU_DATA_DF, MERGED_ITEM_PAGES_DF, 
+    merged_item_pages_menus_df = pd.merge(trimmed_menu_data_df, merged_item_pages_df, 
                                       left_index=True, right_on='menu_id')
     
-    FULL_MERGE = pd.merge(MERGED_ITEM_PAGES_MENUS_DF, TRIMMED_DISH_DATA_DF, 
+    full_merge_df = pd.merge(merged_item_pages_menus_df, trimmed_dish_data_df, 
                       left_index=True, right_index=True)
-    #FULL_MERGE.head()
+    #full_merge_df.head()
     
-    FOR_JSON_OUTPUT = FULL_MERGE.reset_index()
+    for_json_output_df = full_merge_df.reset_index()
     
-    FOR_JSON_OUTPUT.columns
+    for_json_output_df.columns
     renamed_columns = ['dish_id', 'menu_sponsor', 'menu_location', 'menu_date', 'menu_page_count', 
                    'menu_dish_count', 'item_id', 'menu_page_id', 'item_xpos', 'item_ypos', 
                    'item_created_at', 'item_updated_at', 'menu_id', 'menu_page_number', 'image_id', 
                    'page_image_full_height', 'page_image_full_width', 'page_image_uuid', 'dish_name', 
                    'dish_menus_appeared', 'dish_times_appeared', 'dish_normalized_name', 'dish_name_fingerprint']
-    FOR_JSON_OUTPUT.columns = renamed_columns
+    for_json_output_df.columns = renamed_columns
     
-    FOR_JSON_OUTPUT[['menu_page_number', 'dish_id', 'item_id', 'menu_page_id', 'menu_id']].astype(int, raise_on_error=False)
+    for_json_output_df[['menu_page_number', 'dish_id', 'item_id', 'menu_page_id', 'menu_id']].astype(int, raise_on_error=False)
     
-    FOR_JSON_OUTPUT['dish_uri']= FOR_JSON_OUTPUT.dish_id.map(lambda x: 'http://menus.nypl.org/dishes/{0}'.format(int(x)))
-    FOR_JSON_OUTPUT['item_uri']= FOR_JSON_OUTPUT.item_id.map(lambda x: 'http://menus.nypl.org/menu_items/{0}/edit'
+    for_json_output_df['dish_uri']= for_json_output_df.dish_id.map(lambda x: 'http://menus.nypl.org/dishes/{0}'.format(int(x)))
+    for_json_output_df['item_uri']= for_json_output_df.item_id.map(lambda x: 'http://menus.nypl.org/menu_items/{0}/edit'
                                                .format(int(x)))
-    FOR_JSON_OUTPUT['menu_page_uri'] = FOR_JSON_OUTPUT.menu_page_id.map(lambda x: 'http://menus.nypl.org/menu_pages/{0}'
+    for_json_output_df['menu_page_uri'] = for_json_output_df.menu_page_id.map(lambda x: 'http://menus.nypl.org/menu_pages/{0}'
                                                           .format(int(x)))
-    FOR_JSON_OUTPUT['menu_uri'] = FOR_JSON_OUTPUT.menu_id.map(lambda x:'http://menus.nypl.org/menus/{0}'
+    for_json_output_df['menu_uri'] = for_json_output_df.menu_id.map(lambda x:'http://menus.nypl.org/menus/{0}'
                                                 .format(int(x)))
     
-    FOR_JSON_OUTPUT.fillna('null')
+    for_json_output_df.fillna('null')
     
-    pipeline_logger.info('Merged dataframe ready')
-    #FOR_JSON_OUTPUT.head()
+    PIPELINE_LOGGER.info('Merged dataframe ready')
+    #for_json_output_df.head()
     
     # df.iterrows is a generator that yields a positional index and a Series,
     # call the to_json method on the series
-    return (reshape_data(row.to_json()) for i, row in FOR_JSON_OUTPUT.iterrows())
+    return (reshape_data(row.to_json()) for i, row in for_json_output_df.iterrows())
 
 
-if __name__ == '__main__':
+def load(fp, host='localhost', port=9200):
+    """
+    Main loop handles bulk uploads to the
+    elasticsearch server
+    """
 
-    pipeline_logger.info('Menus ETL Pipeline: Starting run …')
+    source_data = fp
+
+    PIPELINE_LOGGER.info('Menus ETL Pipeline: Starting run …')
     c = Counter()
 
     try:
-        client = server()
-        actioner = load_and_tranform(os.environ['MENUS_SOURCE_DATA'])
+        client = server(host, port)
+        actioner = load_and_tranform(source_data)
 
-        pipeline_logger.info('Preparing data to load into Elasticsearch …')
+        PIPELINE_LOGGER.info('Preparing data to load into Elasticsearch …')
         for ok, result in helpers.streaming_bulk(client, actioner, chunk_size=1000):
             action, result = result.popitem()
             doc_id = '/menus/item/{0}'.format(result['_id'])
             if not ok:
-                pipeline_logger.error('Failed to {0} document {1}: {2}'.format(action, doc_id, result['error']))
+                PIPELINE_LOGGER.error('Failed to {0} document {1}: {2}'.format(action, doc_id, result['error']))
             else:
                 c[doc_id] += 1
                 
-            pipeline_logger.info('{0} action succeeded for {1} documents'.format(action, sum(c.values())))
+            PIPELINE_LOGGER.info('{0} action succeeded for {1} documents'.format(action, sum(c.values())))
             
     except BaseException as e:
-        pipeline_logger.error('Something went wrong: {0}'.format(str(e)))
+        PIPELINE_LOGGER.error(
+            'Something went wrong: {exception_class} ({exception_docstring}): {exception_message}'.format(
+                exception_class = e.__class__,
+                exception_docstring = e.__doc__,
+                exception_message = e))
