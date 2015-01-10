@@ -113,6 +113,8 @@ def server(hostname, host_port):
         es = elasticsearch.Elasticsearch([{
             'host': hostname,
             'port': host_port}])
+    except Exception as e:
+        PIPELINE_LOGGER.error('Check to make sure the elasticsearch server is running at the specified host/port and try again. Exiting.')
 
     # TODO: Make these customizable
     index_name = 'menus'
