@@ -19,8 +19,10 @@ import os
 import pandas as pd
 import pytz
 import re
+import sys
 import tarfile
 import time
+import urllib3
 
 
 #TODO: Give option to set up or turn off at cmd line
@@ -106,7 +108,11 @@ def server(hostname, host_port):
     """
     
     PIPELINE_LOGGER.info('Verifying Elasticsearch server is ready to receive data …')
-    es = elasticsearch.Elasticsearch([{'host': hostname, 'port': host_port}])
+    
+    try:
+        es = elasticsearch.Elasticsearch([{
+            'host': hostname,
+            'port': host_port}])
 
     # TODO: Make these customizable
     index_name = 'menus'
@@ -411,9 +417,10 @@ def load(fp, host='localhost', port=9200):
                 
             PIPELINE_LOGGER.info('{0} action succeeded for {1} documents'.format(action, sum(c.values())))
             
-    except BaseException as e:
+    except Exception as e:
         PIPELINE_LOGGER.error(
             'Something went wrong: {exception_class} ({exception_docstring}): {exception_message}'.format(
                 exception_class = e.__class__,
                 exception_docstring = e.__doc__,
                 exception_message = e))
+        sys.exit()
