@@ -22,7 +22,6 @@ import re
 import sys
 import tarfile
 import time
-import urllib3
 
 
 #TODO: Give option to set up or turn off at cmd line
