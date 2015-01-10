@@ -108,6 +108,7 @@ def server(hostname, host_port):
     PIPELINE_LOGGER.info('Verifying Elasticsearch server is ready to receive data …')
     es = elasticsearch.Elasticsearch([{'host': hostname, 'port': host_port}])
 
+    # TODO: Make these customizable
     index_name = 'menus'
     type_name = 'item'
 
