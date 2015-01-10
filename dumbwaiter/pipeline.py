@@ -381,8 +381,13 @@ def load_and_tranform(fpath):
 
 def load(fp, host='localhost', port=9200):
     """
-    Main loop handles bulk uploads to the
-    elasticsearch server
+    Takes a path and an optional specification
+    of hostname and port for (elasticsearch) to
+    load transformed data to.
+
+    Consumes values from a generator and passes them
+    to streaming bulk handler provided by elasticsearch
+    client
     """
 
     source_data = fp
