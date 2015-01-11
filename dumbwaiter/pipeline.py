@@ -295,8 +295,7 @@ def load_and_tranform(fpath):
     # =================================
     
     PIPELINE_LOGGER.info('Working on MenuItem.csv …')
-    PIPELINE_LOGGER.info("Reformatting item dates …\
-                        This may take a few minutes …")
+    PIPELINE_LOGGER.info("Reformatting item dates … This may take a few minutes …")
     latest_item_data_df['item_created_at'] = latest_item_data_df.created_at.map(reformat_dates)
     latest_item_data_df['item_updated_at'] = latest_item_data_df.updated_at.map(reformat_dates)
     PIPELINE_LOGGER.info('Date reformatting complete …')
