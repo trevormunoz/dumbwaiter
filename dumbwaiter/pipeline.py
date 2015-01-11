@@ -137,7 +137,7 @@ def server(hostname, host_port):
             "format": "basic_date_time_no_millis"
         },
         'menu_page_id': {
-            "type": "long",
+            "type": "string",
         } ,
      'menu_sponsor': {
         "type": "string",
@@ -153,7 +153,7 @@ def server(hostname, host_port):
         "type": "string"
         },
      'menu_id': {
-            "type": "long",
+            "type": "string",
         },
      'dish_times_appeared': {
         "type": "double"
@@ -184,7 +184,7 @@ def server(hostname, host_port):
         "format": "basic_date_time_no_millis"
         },
      'dish_id': {
-        "type": "long",
+        "type": "string",
         },
      'dish_name': {
         "type": "string",
@@ -195,10 +195,10 @@ def server(hostname, host_port):
         "index": "not_analyzed"
         },
      'item_id': {
-        "type": "long",
+        "type": "string",
         },
      'image_id': {
-        "type": "long",
+        "type": "string",
         },
      'item_xpos': {
         "type": "double"
