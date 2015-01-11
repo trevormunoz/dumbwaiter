@@ -41,6 +41,8 @@ handler.setFormatter(formatter)
 PIPELINE_LOGGER.addHandler(handler)
 UTC = pytz.utc
 
+DOC_TOTAL = 0
+
 
 def normalize_names(obj):
     '''
@@ -377,9 +379,13 @@ def load_and_tranform(fpath):
     for_json_output_df['menu_uri'] = for_json_output_df.menu_id.map(lambda x:'http://menus.nypl.org/menus/{0}'
                                                 .format(int(x)))
     
+    # So we can calculate percentage completion of upload
+    global DOC_TOTAL
+    DOC_TOTAL = len(for_json_output_df.index)
     for_json_output_df.fillna('null')
     
     PIPELINE_LOGGER.info('Merged dataframe ready')
+    PIPELINE_LOGGER.info('{0} documents to load'.format(DOC_TOTAL))
     #for_json_output_df.head()
     
     # df.iterrows is a generator that yields a positional index and a Series,
@@ -416,7 +422,10 @@ def load(fp, host='localhost', port=9200):
             else:
                 c[doc_id] += 1
                 
-            PIPELINE_LOGGER.info('{0} action succeeded for {1} documents'.format(action, sum(c.values())))
+            PIPELINE_LOGGER.info('{0} action succeeded for {1} documents ({2:.1%} complete)'
+                .format(action,
+                        sum(c.values()),
+                        float(sum(c.values()))/DOC_TOTAL))
             
     except Exception as e:
         PIPELINE_LOGGER.error(
