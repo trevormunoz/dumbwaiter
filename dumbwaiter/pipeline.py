@@ -424,6 +424,8 @@ def load(fp, host='localhost', port=9200):
         # Turn off refreshes during bulk upload to improve indexing performance
         client.indices.put_settings(index='menus',
                                 body='index.refresh_interval=-1')
+        client.indices.put_settings(index='menus',
+                                body='index.number_of_replicas=0')
         for ok, result in helpers.streaming_bulk(client, actioner, chunk_size=2000):
             action, result = result.popitem()
             doc_id = '/menus/item/{0}'.format(result['_id'])
