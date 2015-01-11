@@ -416,7 +416,11 @@ def load(fp, host='localhost', port=9200):
         actioner = load_and_tranform(source_data)
 
         PIPELINE_LOGGER.info('Preparing data to load into Elasticsearch …')
-        for ok, result in helpers.streaming_bulk(client, actioner, chunk_size=1000):
+
+        # Turn off refreshes during bulk upload to improve indexing performance
+        client.indices.put_settings(index='menus',
+                                body='index.refresh_interval=-1')
+        for ok, result in helpers.streaming_bulk(client, actioner, chunk_size=2000):
             action, result = result.popitem()
             doc_id = '/menus/item/{0}'.format(result['_id'])
             if not ok:
@@ -428,6 +432,12 @@ def load(fp, host='localhost', port=9200):
                 .format(action,
                         sum(c.values()),
                         float(sum(c.values()))/DOC_TOTAL))
+        
+        # When uploads are done, refresh the index to make it available
+        client.indices.put_settings(index='menus',
+                                body='index.refresh_interval=1s')
+        client.indices.refresh('menus')
+        PIPELINE_LOGGER.info('Elasticsearch index is ready!')
             
     except Exception as e:
         PIPELINE_LOGGER.error(
