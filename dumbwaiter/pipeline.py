@@ -133,11 +133,15 @@ def server(hostname, host_port):
 
     item_mapping = {
     "dynamic":      "strict",
-    "date_detection": false,
+    "date_detection": "false",
     "properties": {
         'item_updated_at': {
             "type": "date",
             "format": "basic_date_time_no_millis"
+        },
+        'menu_date': {
+            "type": "date",
+            "format": "date"
         },
         'menu_page_id': {
             "type": "string",
