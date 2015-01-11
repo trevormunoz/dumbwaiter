@@ -131,7 +131,10 @@ def server(hostname, host_port):
     res = es.indices.create(index = index_name)
     PIPELINE_LOGGER.info(" response: '{0}'".format(res))
 
-    item_mapping = {"properties": {
+    item_mapping = {
+    "dynamic":      "strict",
+    "date_detection": false,
+    "properties": {
         'item_updated_at': {
             "type": "date",
             "format": "basic_date_time_no_millis"
