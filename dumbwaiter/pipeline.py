@@ -437,6 +437,7 @@ def load(fp, host='localhost', port=9200):
         PIPELINE_LOGGER.info('Preparing data to load into Elasticsearch …')
 
         # Turn off refreshes during bulk upload to improve indexing performance
+        PIPELINE_LOGGER.info('Turning off refreshing and replication to speed up indexing …')
         client.indices.put_settings(index='menus',
                                 body='index.refresh_interval=-1')
         client.indices.put_settings(index='menus',
