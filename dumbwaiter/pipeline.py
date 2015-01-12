@@ -458,6 +458,8 @@ def load(fp, host='localhost', port=9200):
         
         # When uploads are done, refresh the index to make it available
         client.indices.put_settings(index='menus',
+                                body='index.number_of_replicas=1')
+        client.indices.put_settings(index='menus',
                                 body='index.refresh_interval=1s')
         client.indices.refresh('menus')
         PIPELINE_LOGGER.info('Elasticsearch index is ready!')
