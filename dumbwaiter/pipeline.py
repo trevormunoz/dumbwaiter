@@ -8,7 +8,6 @@
 # updated: 28 October 2014, 19 November 2014, 3 December 2014,
 #     14 December 2014, 8-9 January 2015
 
-from collections import Counter
 import datetime
 import elasticsearch
 from elasticsearch import helpers
