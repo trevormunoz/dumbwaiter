@@ -145,6 +145,7 @@ def server(hostname, host_port):
         },
         'menu_page_id': {
             "type": "string",
+            "index": "not_analyzed"
         } ,
      'menu_sponsor': {
         "type": "string",
@@ -153,6 +154,9 @@ def server(hostname, host_port):
      'menu_page_count': {
         "type": "double"
         },
+     'menu_dish_count': {
+        "type": "double"
+     },
      'item_ypos': {
         "type": "double"
         },
@@ -161,6 +165,7 @@ def server(hostname, host_port):
         },
      'menu_id': {
             "type": "string",
+            "index": "not_analyzed"
         },
      'dish_times_appeared': {
         "type": "double"
@@ -182,7 +187,14 @@ def server(hostname, host_port):
         },
      'page_image_uuid': {
         "type": "string"
+        "index": "not_analyzed"
         },
+     'page_image_full_height' : {
+        "type": "double"
+     },
+     'page_image_full_width' : {
+        "type": "double"
+     },
      'menu_page_number': {
         "type": "double"
         },
@@ -192,6 +204,7 @@ def server(hostname, host_port):
         },
      'dish_id': {
         "type": "string",
+        "index": "not_analyzed"
         },
      'dish_name': {
         "type": "string",
@@ -203,9 +216,11 @@ def server(hostname, host_port):
         },
      'item_id': {
         "type": "string",
+        "index": "not_analyzed"
         },
      'image_id': {
         "type": "string",
+        "index": "not_analyzed"
         },
      'item_xpos': {
         "type": "double"
