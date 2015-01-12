@@ -186,7 +186,7 @@ def server(hostname, host_port):
         "index": "not_analyzed"
         },
      'page_image_uuid': {
-        "type": "string"
+        "type": "string",
         "index": "not_analyzed"
         },
      'page_image_full_height' : {
