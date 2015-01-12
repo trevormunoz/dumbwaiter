@@ -443,18 +443,7 @@ def load(fp, host='localhost', port=9200):
         client.indices.put_settings(index='menus',
                                 body='index.number_of_replicas=0')
 
-        for ok, result in helpers.streaming_bulk(client, actioner, chunk_size=4000):
-            action, result = result.popitem()
-            doc_id = '/menus/item/{0}'.format(result['_id'])
-            if not ok:
-                PIPELINE_LOGGER.error('Failed to {0} document {1}: {2}'.format(action, doc_id, result['error']))
-            else:
-                c[doc_id] += 1
-                
-            PIPELINE_LOGGER.info('{0} action succeeded for {1} documents ({2:.1%} complete)'
-                .format(action,
-                        sum(c.values()),
-                        float(sum(c.values()))/DOC_TOTAL))
+        helpers.bulk(client, actioner)
         
         # When uploads are done, refresh the index to make it available
         client.indices.put_settings(index='menus',
