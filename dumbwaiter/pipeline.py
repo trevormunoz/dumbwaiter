@@ -470,4 +470,4 @@ def load(fp, host='localhost', port=9200):
                 exception_class = e.__class__,
                 exception_docstring = e.__doc__,
                 exception_message = e))
-        sys.exit()
+        #sys.exit()
