@@ -2,10 +2,11 @@
 # coding: utf-8
 
 from setuptools import setup
+from dumbwaiter import __version__
 
 setup(
     name = 'dumbwaiter',
-    version = '0.3.0',
+    version = __version__,
     description = 'Extract-Tranform-Load pipeline for NYPL menu data',
     author = 'Trevor Muñoz and Katie Rawson',
     author_email = 'trevor@trevormunoz.com',
