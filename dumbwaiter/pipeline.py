@@ -428,7 +428,6 @@ def load(fp, host='localhost', port=9200):
     source_data = fp
 
     PIPELINE_LOGGER.info('Menus ETL Pipeline: Starting run …')
-    c = Counter()
 
     try:
         client = server(host, port)
