@@ -35,7 +35,8 @@ formatter = logging.Formatter(
 handler = logging.handlers.RotatingFileHandler(
     LOG_FILENAME,
     maxBytes=500000,
-    backupCount=10)
+    backupCount=10,
+    encoding='utf-8')
 handler.setFormatter(formatter)
 PIPELINE_LOGGER.addHandler(handler)
 UTC = pytz.utc
