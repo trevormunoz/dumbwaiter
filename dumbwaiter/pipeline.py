@@ -15,6 +15,7 @@ import json
 import logging
 import logging.handlers
 import os
+import errno
 import pandas as pd
 import pytz
 import re
@@ -24,8 +25,18 @@ import time
 
 
 #TODO: Give option to set up or turn off at cmd line
-LOG_FILENAME = os.path.join(os.environ['MENUS_LOG_HOME'],
+if 'MENUS_LOG_HOME' in os.environ:
+    LOG_FILENAME = os.path.join(os.environ['MENUS_LOG_HOME'],
                             'nypl_menus_data_transform.log')
+else:
+    try:
+        os.makedirs('logs')
+        LOG_FILENAME = os.path.join('logs', 'nypl_menus_data_transform.log')
+    except OSError as e:
+        if e.errno == errno.EEXIST and os.path.isdir('logs'):
+            LOG_FILENAME = os.path.join('logs',
+                                        'nypl_menus_data_transform.log')
+        else: raise
 
 PIPELINE_LOGGER = logging.getLogger('MenusDataTransformLogger')
 PIPELINE_LOGGER.setLevel(logging.INFO)
