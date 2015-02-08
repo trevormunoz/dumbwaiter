@@ -1,6 +1,8 @@
 # Dumbwaiter
 ##### *An ETL pipeline for NYPL menus data*
 
+[![DOI](https://zenodo.org/badge/doi/10.5281/zenodo.14916.svg)](http://dx.doi.org/10.5281/zenodo.14916)
+
 Script for processing open data released by the 
 New York Public Library's 
 [*What's on the Menu?*](http://menus.nypl.org) project.
