@@ -122,10 +122,9 @@ def server(hostname, host_port):
     PIPELINE_LOGGER.info('Verifying Elasticsearch server is ready to receive data …')
     
     try:
-        es = elasticsearch.Elasticsearch([{
-            'host': hostname,
-            'port': host_port}],
-            timeout=30)
+        es = elasticsearch.Elasticsearch([
+            {'host': hostname, 'port': host_port, 'use_ssl': True, 'verify_certs'=True}
+            ], timeout=30)
     except Exception as e:
         PIPELINE_LOGGER.error('Check to make sure the elasticsearch server is running at the specified host/port and try again. Exiting.')
 
